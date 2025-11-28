@@ -16,36 +16,48 @@ MODEL_CONFIG = {
     "gemini-2.5-flash-image-landscape": {
         "type": "image",
         "model_name": "GEM_PIX",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
     "gemini-2.5-flash-image-portrait": {
         "type": "image",
         "model_name": "GEM_PIX",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
 
     # 图片生成 - GEM_PIX_2 (Gemini 3.0 Pro)
     "gemini-3.0-pro-image-landscape": {
         "type": "image",
         "model_name": "GEM_PIX_2",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
     "gemini-3.0-pro-image-portrait": {
         "type": "image",
         "model_name": "GEM_PIX_2",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
 
     # 图片生成 - IMAGEN_3_5 (Imagen 4.0)
     "imagen-4.0-generate-preview-landscape": {
         "type": "image",
         "model_name": "IMAGEN_3_5",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_LANDSCAPE",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
     "imagen-4.0-generate-preview-portrait": {
         "type": "image",
         "model_name": "IMAGEN_3_5",
-        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT"
+        "aspect_ratio": "IMAGE_ASPECT_RATIO_PORTRAIT",
+        "supports_images": True,
+        "max_images": None  # 不限制图片数量
     },
 
     # ========== 文生视频 (T2V - Text to Video) ==========
@@ -396,20 +408,23 @@ class GenerationHandler:
             # 上传图片 (如果有)
             image_inputs = []
             if images and len(images) > 0:
+                image_count = len(images)
                 if stream:
-                    yield self._create_stream_chunk("上传参考图片...\n")
+                    yield self._create_stream_chunk(f"上传 {image_count} 张参考图片...\n")
 
-                image_bytes = images[0]  # 图生图只需要一张
-                media_id = await self.flow_client.upload_image(
-                    token.at,
-                    image_bytes,
-                    model_config["aspect_ratio"]
-                )
-
-                image_inputs = [{
-                    "name": media_id,
-                    "imageInputType": "IMAGE_INPUT_TYPE_REFERENCE"
-                }]
+                # 上传所有图片，不限制数量（参考 R2V 处理方式）
+                for idx, img in enumerate(images):
+                    media_id = await self.flow_client.upload_image(
+                        token.at,
+                        img,
+                        model_config["aspect_ratio"]
+                    )
+                    image_inputs.append({
+                        "name": media_id,
+                        "imageInputType": "IMAGE_INPUT_TYPE_REFERENCE"
+                    })
+                
+                debug_logger.log_info(f"[IMAGE] 上传了 {len(image_inputs)} 张参考图片")
 
             # 调用生成API
             if stream:
